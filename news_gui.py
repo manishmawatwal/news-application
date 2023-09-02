@@ -10,13 +10,18 @@ from urllib.request import urlopen
 from PIL import ImageTk, Image
 import webbrowser
 
+from plyer import notification
+import os
+
 class NewsApp:
     def __init__(self):
         # fetch data
         self.current_section = "India"
         self.data = {}
+        
         # load GUI
         self.load_gui()
+        
         # load 1st news item
         self.fetch_data()
 
@@ -55,6 +60,17 @@ class NewsApp:
     
     def open_link(self, url):
         webbrowser.open(url)
+    
+    def send_notification(self, news_title):
+        try:
+            notification.notify(
+                title = 'Latest News',
+                message = news_title,
+                app_name = 'NewsApp',
+                timeout = 10
+            )
+        except Exception as e:
+            print(f"Notification failed: {str(e)}")
     
     def load_news_item(self, index):
         # clear the screen for the new news item
@@ -105,4 +121,11 @@ class NewsApp:
 
         self.root.mainloop()
 
-obj = NewsApp()
+if __name__ == "__main__":
+    obj = NewsApp()
+    if obj.current_section in obj.data:
+        top_headline_data = obj.data[obj.current_section]
+        if top_headline_data['articles']:
+            first_article_title = top_headline_data['articles'][0]['title']
+            obj.send_notification(first_article_title)
+    obj.root.mainloop()
