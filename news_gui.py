@@ -12,6 +12,7 @@ import webbrowser
 
 from plyer import notification
 import os
+import json
 
 class NewsApp:
     def __init__(self):
@@ -19,11 +20,17 @@ class NewsApp:
         self.current_section = "India"
         self.data = {}
         
+        # load cached data if available
+        self.load_cached_data()
+        
         # load GUI
         self.load_gui()
         
         # load 1st news item
         self.fetch_data()
+
+        # default image if internet is not available
+        self.default_image_path = "default-no-img.jpg"
 
     def load_gui(self):
         self.root = Tk()
@@ -45,10 +52,33 @@ class NewsApp:
             api_url = "https://newsapi.org/v2/top-headlines?country=in&apiKey=c3eba5e1d8a041b591358ee8371e24e8"
         else:
             api_url = "https://newsapi.org/v2/everything?q=finance&apiKey=c3eba5e1d8a041b591358ee8371e24e8"
-        if api_url:
+        try:
             response = requests.get(api_url)
-            self.data[self.current_section] = response.json()
-            self.load_news_item(0)
+            if response.status_code == 200:
+                self.data[self.current_section] = response.json()
+                self.save_cached_data(self.data)
+                self.load_news_item(0)
+            else:
+                # handle error or use cached data
+                if self.data:
+                    self.load_news_item(0)
+                else:
+                    pass
+        except requests.exceptions.RequestException as e:
+            if self.data:
+                self.load_news_item(0)
+    
+    def load_cached_data(self):
+        if os.path.exists('cached_news_data.txt'):
+            with open('cached_news_data.txt', 'r') as file:
+                try:
+                    self.data = json.load(file)
+                except json.JSONDecodeError:
+                    self.data = {}
+    
+    def save_cached_data(self, data):
+        with open("cached_news_data.txt", "w") as file:
+            json.dump(data, file)
 
     def load_top_headlines(self):
         self.current_section = "India"
@@ -84,9 +114,7 @@ class NewsApp:
                 im = Image.open(io.BytesIO(raw_data)).resize((350, 250))
                 photo = ImageTk.PhotoImage(im)
             except:
-                img_url = 'https://www.hhireb.com/wp-content/uploads/2019/08/default-no-img.jpg'
-                raw_data = urlopen(img_url).read()
-                im = Image.open(io.BytesIO(raw_data)).resize((350, 250))
+                im = Image.open('default-no-img.jpg').resize((350, 250))
                 photo = ImageTk.PhotoImage(im)
 
             label = Label(self.root, image = photo)
